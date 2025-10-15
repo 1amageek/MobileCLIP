@@ -32,8 +32,7 @@ let package = Package(
         ),
         .testTarget(
             name: "MobileCLIPTests",
-            dependencies: ["MobileCLIP"],
-            resources: [.copy("Resources")]
+            dependencies: ["MobileCLIP"]
         ),
     ]
 )

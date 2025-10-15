@@ -1,31 +1,31 @@
 import Testing
 import Foundation
 import MLX
+import MLXLMCommon
 @testable import MobileCLIP
-
-// MARK: - Test Suite
 
 @Suite("MobileCLIP Model Tests")
 struct MobileCLIPTests {
 
     // MARK: - Model Loading Tests
 
-    @Test("Model loads from bundle successfully")
-    func modelLoadingFromBundle() async throws {
+    @Test("Model loads from Hugging Face Hub successfully")
+    func modelLoadingFromHub() async throws {
         let model = MobileCLIP()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
-        try model.loadModelFromBundle()
         model.printModelInfo()
         model.printAvailableKeys(limit: 10)
 
-        // Model loaded successfully (no assertion needed as loadModelFromBundle would throw on failure)
+        // Model loaded successfully (no assertion needed as load would throw on failure)
     }
 
     @Test("Model info validates tensor count")
     func modelInfo() async throws {
-        let loader = ModelLoader()
+        let model = MobileCLIP()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
-        try loader.loadFromBundle()
+        let loader = model.loader
 
         #expect(loader.weights.count > 0, "Should have loaded weights")
         #expect(loader.weights.count == 1715, "Should have exactly 1715 tensors")
@@ -51,7 +51,7 @@ struct VisionEncoderTests {
     @Test("Single image encoding produces correct shape")
     func visionEncoding() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // Use constant non-zero value to avoid NaN in L2 normalization
         let dummyImage = MLXArray.ones([1, 3, 224, 224]) * 0.5
@@ -72,7 +72,7 @@ struct VisionEncoderTests {
     @Test("Batch image encoding")
     func visionEncodingBatch() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         let batchSize = 4
         let batchImages = MLXArray.zeros([batchSize, 3, 224, 224])
@@ -87,7 +87,7 @@ struct VisionEncoderTests {
     @Test("Vision encoder normalizes embeddings", arguments: [1, 2, 4])
     func visionEncoderNormalization(batchSize: Int) async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // Use constant non-zero value to avoid NaN
         let images = MLXArray.ones([batchSize, 3, 224, 224]) * 0.5
@@ -111,7 +111,7 @@ struct TextEncoderTests {
     @Test("Single text encoding produces correct shape")
     func textEncoding() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         var tokens = [Int32](repeating: 0, count: 77)
         tokens[0] = 49406  // SOS
@@ -137,7 +137,7 @@ struct TextEncoderTests {
     @Test("Batch text encoding")
     func textEncodingBatch() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         let batchSize = 3
         var batchTokens = [[Int32]]()
@@ -163,7 +163,7 @@ struct TextEncoderTests {
     @Test("Text encoder handles special tokens correctly")
     func textEncoderSpecialTokens() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // SOSのみ
         var sosOnly = [Int32](repeating: 0, count: 77)
@@ -274,7 +274,7 @@ struct SimilarityTests {
     @Test("Similarity is in valid range")
     func similarityRange() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         let dummyImage = MLXArray.zeros([1, 3, 224, 224])
         var tokens = [Int32](repeating: 0, count: 77)
@@ -300,7 +300,7 @@ struct SimilarityTests {
     @Test("Zero-shot classification produces valid scores")
     func zeroShotClassification() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         let testImage = MLXArray.zeros([1, 3, 224, 224])
         let imageEmbedding = try model.encodeImage(testImage)
@@ -335,7 +335,7 @@ struct SimilarityTests {
     @Test("Identical embeddings have similarity of 1.0")
     func identicalEmbeddings() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // Use constant non-zero value to avoid NaN
         let image = MLXArray.ones([1, 3, 224, 224]) * 0.5
@@ -359,9 +359,8 @@ struct IntegrationTests {
     @Test("Full pipeline executes successfully")
     func fullPipeline() async throws {
         let model = MobileCLIP()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
-        // 1. Load model
-        try model.loadModelFromBundle()
         print("✅ Model loaded")
 
         // 2. Encode image
@@ -391,7 +390,7 @@ struct IntegrationTests {
     @Test("Model can be reused for multiple inferences")
     func modelReuse() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // 複数回の推論
         for i in 0..<3 {
@@ -407,7 +406,7 @@ struct IntegrationTests {
     @Test("Sequential encoding works correctly")
     func sequentialEncoding() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // 複数回の連続エンコード
         var allSucceeded = true
@@ -435,7 +434,7 @@ struct PerformanceTests {
     @Test("Vision encoding performance")
     func visionEncodingPerformance() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         let image = MLXArray.zeros([1, 3, 224, 224])
 
@@ -457,7 +456,7 @@ struct PerformanceTests {
     @Test("Text encoding performance")
     func textEncodingPerformance() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         var tokens = [Int32](repeating: 0, count: 77)
         tokens[0] = 49406
@@ -489,16 +488,17 @@ struct ErrorHandlingTests {
     @Test("ModelLoader handles missing files gracefully")
     func modelLoaderMissingFile() throws {
         let loader = ModelLoader()
+        let nonexistentURL = URL(fileURLWithPath: "/nonexistent/path/model.safetensors")
 
         #expect(throws: ModelError.self) {
-            try loader.loadWeights(basePath: "/nonexistent/path")
+            try loader.loadFromSafetensors(url: nonexistentURL)
         }
     }
 
     @Test("Text encoder handles empty sequence")
     func textEncoderEmptySequence() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // PADトークンのみ
         let emptyTokens = MLXArray([Int32](repeating: 0, count: 77)).reshaped(1, 77)
@@ -510,7 +510,7 @@ struct ErrorHandlingTests {
     @Test("Text encoder produces different embeddings for different tokens")
     func textEncoderDifferentTokens() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         var tokens1 = [Int32](repeating: 0, count: 77)
         tokens1[0] = 49406
@@ -538,7 +538,7 @@ struct InputValidationTests {
     @Test("Vision encoder handles different batch sizes", arguments: [1, 2, 4, 8])
     func visionEncoderBatchSizes(batchSize: Int) async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         let images = MLXArray.zeros([batchSize, 3, 224, 224])
         let embeddings = try model.encodeImage(images)
@@ -550,7 +550,7 @@ struct InputValidationTests {
     @Test("Text encoder handles different batch sizes", arguments: [1, 2, 4, 8])
     func textEncoderBatchSizes(batchSize: Int) async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         var batchTokens = [[Int32]]()
         for i in 0..<batchSize {
@@ -572,7 +572,7 @@ struct InputValidationTests {
     @Test("Vision encoder produces consistent outputs")
     func visionEncoderConsistency() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // Use constant non-zero value to avoid NaN
         let image = MLXArray.ones([1, 3, 224, 224]) * 0.5
@@ -590,7 +590,7 @@ struct InputValidationTests {
     @Test("Text encoder produces consistent outputs")
     func textEncoderConsistency() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         var tokens = [Int32](repeating: 0, count: 77)
         tokens[0] = 49406
@@ -799,7 +799,7 @@ struct EdgeCaseTests {
     @Test("Vision encoder handles all-zero input")
     func visionEncoderZeroInput() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         let zeroImage = MLXArray.zeros([1, 3, 224, 224])
         let embedding = try model.encodeImage(zeroImage)
@@ -815,7 +815,7 @@ struct EdgeCaseTests {
     @Test("Text encoder handles only padding")
     func textEncoderOnlyPadding() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // PADトークン(0)のみ
         let padOnlyTokens = MLXArray([Int32](repeating: 0, count: 77)).reshaped(1, 77)
@@ -831,7 +831,7 @@ struct EdgeCaseTests {
     @Test("Model handles multiple sequential operations")
     func multipleSequentialOperations() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // 画像→テキスト→画像→テキストの順で処理
         for i in 0..<5 {

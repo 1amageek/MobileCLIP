@@ -1,5 +1,7 @@
 import Foundation
 import MLX
+import MLXLMCommon
+import Hub
 
 /// Memory profile for GPU cache configuration
 ///
@@ -38,9 +40,9 @@ public enum MemoryProfile {
 /// MobileCLIP2-S4 Model
 ///
 /// CLIP model for encoding images and text to compute similarity
-public class MobileCLIP {
+public class MobileCLIP: @unchecked Sendable {
 
-    private let loader: ModelLoader
+    let loader: ModelLoader  // internal for testing
     private var visionEncoder: VisionEncoderComplete?
     private var textEncoder: TextEncoder?
 
@@ -69,73 +71,50 @@ public class MobileCLIP {
         MLX.GPU.set(cacheLimit: memoryProfile.bytes)
     }
 
-    // MARK: - Model Loading (Synchronous)
+    // MARK: - Model Loading
 
-    /// ローカルパスからモデルをロード
-    /// - Parameter basePath: モデルファイルのベースパス
-    public func loadModel(from basePath: String) throws {
-        try loader.loadWeights(basePath: basePath)
-        try initializeEncoders()
-    }
-
-    /// Bundleからモデルをロード
-    /// - Parameter resourceName: リソース名（デフォルト: "MobileCLIP2-S4"）
-    public func loadModelFromBundle(resourceName: String = "MobileCLIP2-S4") throws {
-        try loader.loadFromBundle(resourceName: resourceName)
-        try initializeEncoders()
-    }
-
-    // MARK: - Model Loading (Asynchronous)
-
-    /// ローカルパスからモデルを非同期ロード
-    /// - Parameter basePath: モデルファイルのベースパス
+    /// Load model from local directory or Hugging Face Hub
+    /// - Parameters:
+    ///   - configuration: Model configuration (uses MLXLMCommon.ModelConfiguration)
+    ///   - hub: HubApi instance (default: .shared)
+    ///   - progressHandler: Progress callback for downloads (optional)
     ///
     /// Usage:
     /// ```swift
-    /// let model = MobileCLIP2()
-    /// try await model.loadModelAsync(from: "/path/to/model")
-    /// ```
-    public func loadModelAsync(from basePath: String) async throws {
-        // MLX operations are already optimized for async execution
-        try loader.loadWeights(basePath: basePath)
-        try initializeEncoders()
-    }
-
-    /// Bundleからモデルを非同期ロード
-    /// - Parameter resourceName: リソース名（デフォルト: "MobileCLIP2-S4"）
+    /// let model = MobileCLIP()
     ///
-    /// Usage:
-    /// ```swift
-    /// let model = MobileCLIP2()
-    /// try await model.loadModelFromBundleAsync()
-    /// ```
-    public func loadModelFromBundleAsync(resourceName: String = "MobileCLIP2-S4") async throws {
-        // MLX operations are already optimized for async execution
-        try loader.loadFromBundle(resourceName: resourceName)
-        try initializeEncoders()
-    }
-
-    /// Hugging Faceからモデルを自動ダウンロードして読み込む
-    /// 初回実行時にモデルをダウンロードし、2回目以降はキャッシュを使用
-    /// - Parameter config: Model configuration (default: MobileCLIP2-S4)
-    /// - Parameter progressHandler: Progress callback (optional)
+    /// // Load from Hugging Face Hub (downloads and caches automatically)
+    /// let config = ModelConfiguration(id: "1amageek/MobileCLIP2-S4")
+    /// try await model.load(configuration: config)
     ///
-    /// Usage:
-    /// ```swift
-    /// let model = MobileCLIP2()
-    /// try await model.loadModelFromHuggingFace()  // Automatically downloads on first run
+    /// // Load from local directory
+    /// let localURL = URL(fileURLWithPath: "/path/to/model/directory")
+    /// let localConfig = ModelConfiguration(directory: localURL)
+    /// try await model.load(configuration: localConfig)
     /// ```
-    public func loadModelFromHuggingFace(
-        config: ModelDownloader.ModelConfig = .mobileCLIP2S4,
+    public func load(
+        configuration: ModelConfiguration,
+        hub: HubApi = .shared,
         progressHandler: @Sendable @escaping (Progress) -> Void = { _ in }
     ) async throws {
-        let downloader = ModelDownloader()
-        let modelURL = try await downloader.download(
-            config: config,
+        // Use MLXLMCommon's downloadModel function
+        let modelDirectory = try await MLXLMCommon.downloadModel(
+            hub: hub,
+            configuration: configuration,
             progressHandler: progressHandler
         )
 
-        // Load weights from downloaded safetensors file
+        // Find the safetensors file in the model directory
+        let contents = try FileManager.default.contentsOfDirectory(
+            at: modelDirectory,
+            includingPropertiesForKeys: nil
+        )
+
+        guard let modelURL = contents.first(where: { $0.pathExtension == "safetensors" }) else {
+            throw ModelError.fileNotFound("No .safetensors file found in \(modelDirectory.path)")
+        }
+
+        // Load weights from safetensors file
         try loader.loadFromSafetensors(url: modelURL)
         try initializeEncoders()
     }

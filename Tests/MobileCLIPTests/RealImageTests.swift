@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 import MLX
+import MLXLMCommon
 import CoreGraphics
 import AppKit
 @testable import MobileCLIP
@@ -143,7 +144,7 @@ struct RealImageTests {
         }
 
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         let imageArray = try Self.loadImage(from: testImagePath)
         print("✅ Loaded image: \(imageArray.shape)")
@@ -172,7 +173,7 @@ struct RealImageTests {
         }
 
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // 画像をエンコード
         let imageArray = try Self.loadImage(from: testImagePath)
@@ -222,7 +223,7 @@ struct RealImageTests {
         }
 
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // 画像をエンコード
         let imageArray = try Self.loadImage(from: testImagePath)

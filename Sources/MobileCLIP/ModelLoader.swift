@@ -9,69 +9,16 @@ public class ModelLoader {
 
     public init() {}
 
-    /// 4つに分割された.npzファイルをすべて読み込む
-    /// - Parameter basePath: モデルファイルのベースパス（拡張子なし）
-    /// - Throws: ファイルが見つからない、または読み込みエラー
-    public func loadWeights(basePath: String) throws {
-        for partNumber in 1...4 {
-            let filename = "\(basePath)_part\(String(format: "%02d", partNumber)).npz"
-            let url = URL(fileURLWithPath: filename)
-
-            guard FileManager.default.fileExists(atPath: filename) else {
-                throw ModelError.fileNotFound(filename)
-            }
-
-            // .npz ファイルを読み込む
-            let partWeights = try MLX.loadArrays(url: url)
-
-            // 既存の weights に追加
-            for (key, value) in partWeights {
-                weights[key] = value
-            }
-        }
-    }
-
-    /// safetensorsファイルを直接ロード
-    /// - Parameter url: safetensorsファイルのURL
-    /// - Throws: ファイルが見つからない、または読み込みエラー
+    /// Load model weights from safetensors file
+    /// - Parameter url: URL to the safetensors file
+    /// - Throws: File not found or loading error
     public func loadFromSafetensors(url: URL) throws {
         guard FileManager.default.fileExists(atPath: url.path) else {
-            throw ModelError.fileNotFound("File not found at \(url.path)")
+            throw ModelError.fileNotFound("Model file not found at \(url.path)")
         }
 
-        // MLX.loadArrays()はsafetensors形式をサポート
+        // MLX.loadArrays() supports safetensors format
         weights = try MLX.loadArrays(url: url)
-    }
-
-    /// Bundleからsafetensorsファイルをロード
-    /// - Parameter resourceName: リソース名（拡張子なし）
-    /// - Throws: ファイルが見つからない、または読み込みエラー
-    public func loadFromBundle(resourceName: String = "MobileCLIP2-S4") throws {
-        // Bundle.moduleのリソースURLを取得
-        guard let bundleResourceURL = Bundle.module.resourceURL else {
-            throw ModelError.fileNotFound("Bundle.module.resourceURL not found")
-        }
-
-        // safetensorsファイルを読み込む
-        // .copy("Resources")を使うと、Bundle構造が異なる:
-        // - swift test: .bundle/Resources/MobileCLIP2-S4.safetensors
-        // - Xcode: .bundle/Contents/Resources/Resources/MobileCLIP2-S4.safetensors
-        let safetensorsFile = "\(resourceName).safetensors"
-
-        // まず直接確認
-        var url = bundleResourceURL.appendingPathComponent(safetensorsFile)
-
-        // 見つからない場合は Resources/ サブディレクトリを試す
-        if !FileManager.default.fileExists(atPath: url.path) {
-            url = bundleResourceURL.appendingPathComponent("Resources").appendingPathComponent(safetensorsFile)
-        }
-
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            throw ModelError.fileNotFound("\(safetensorsFile) not found at \(url.path)")
-        }
-
-        // Use the new loadFromSafetensors method
-        try loadFromSafetensors(url: url)
     }
 
     /// 特定のキーの重みを取得

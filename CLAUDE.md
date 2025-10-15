@@ -98,8 +98,8 @@ let norm = embedding.square().sum(axis: -1, keepDims: true).sqrt()
 ```swift
 @Test("Model produces deterministic outputs")
 func determinism() async throws {
-    let model = MobileCLIP2()
-    try model.loadModelFromBundle()
+    let model = MobileCLIP()
+    try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
     // Use constant non-zero value
     let input = MLXArray.ones([1, 3, 224, 224]) * 0.5
@@ -116,6 +116,77 @@ func determinism() async throws {
     #expect(diff.item(Float.self) < 1e-6)
 }
 ```
+
+---
+
+## Model Loading and Caching
+
+### Hugging Face Hub Integration
+
+MobileCLIP uses `MLXLMCommon.downloadModel()` from mlx-swift-examples for automatic model downloading and caching from Hugging Face Hub.
+
+#### How It Works
+
+1. **Automatic Download**: When you call `model.load(configuration:)`, it downloads model files from Hugging Face Hub
+2. **Automatic Caching**: Downloaded files are cached in `~/.cache/huggingface/hub/`
+3. **Offline Support**: Once cached, the model can be used offline
+4. **Progress Tracking**: Optional progress handler for download status
+
+#### Key Features
+
+```swift
+// ✅ Download from Hugging Face Hub (cached automatically)
+let model = MobileCLIP()
+try await model.load(
+    configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4")
+)
+
+// ✅ With progress handler
+try await model.load(
+    configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"),
+    progressHandler: { progress in
+        print("Downloading: \(Int(progress.fractionCompleted * 100))%")
+    }
+)
+
+// ✅ Load from local directory (for custom models)
+let localURL = URL(fileURLWithPath: "/path/to/model/directory")
+try await model.load(configuration: ModelConfiguration(directory: localURL))
+```
+
+#### Cache Location
+
+Models are automatically cached by HubApi in:
+- **macOS**: `~/.cache/huggingface/hub/models--{owner}--{repo}/`
+- **iOS**: App's cache directory
+
+The cache includes:
+- `*.safetensors` - Model weights
+- `*.json` - Configuration files
+
+#### Offline Mode
+
+If network is unavailable and model is not cached:
+- **Error**: `offlineModeError("No files available locally for this repository")`
+- **Solution**: Ensure network connection on first run to download and cache the model
+
+#### Testing Pattern
+
+In tests, directly instantiate and load the model:
+
+```swift
+// In test methods
+let model = MobileCLIP()
+try await model.load(
+    configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4")
+)
+```
+
+**How caching works:**
+- `MLXLMCommon.downloadModel()` automatically caches files in `~/.cache/huggingface/hub/`
+- First test execution downloads the model (1.78GB for MobileCLIP2-S4)
+- Subsequent tests reuse the cached files
+- Each test creates a new `MobileCLIP` instance but loads from cache (fast)
 
 ---
 
@@ -461,31 +532,31 @@ Set an appropriate GPU cache limit to prevent out-of-memory issues and improve p
 
 ```swift
 // Default: Balanced (64MB) - Recommended for most devices
-let model = MobileCLIP2()
+let model = MobileCLIP()
 
 // Memory-constrained devices (e.g., iPhone SE, older iPads)
-let model = MobileCLIP2(memoryProfile: .low)  // 20MB
+let model = MobileCLIP(memoryProfile: .low)  // 20MB
 
 // High-performance devices (e.g., M1/M2 Macs, iPad Pro)
-let model = MobileCLIP2(memoryProfile: .high)  // 128MB
+let model = MobileCLIP(memoryProfile: .high)  // 128MB
 
 // Custom configuration
-let model = MobileCLIP2(memoryProfile: .custom(megabytes: 100))  // 100MB
+let model = MobileCLIP(memoryProfile: .custom(megabytes: 100))  // 100MB
 ```
 
 **Why this matters:**
 - MLX uses a GPU buffer cache to reuse memory
 - Too large: Can cause out-of-memory crashes
 - Too small: Forces frequent memory allocation/deallocation
-- `.balanced` (64MB) is optimal for MobileCLIP2 on most devices
+- `.balanced` (64MB) is optimal for MobileCLIP on most devices
 
 #### 2. Warm-up for First Inference
 
 The first inference is slow because Metal kernels need to be compiled. Warm up the model to avoid this:
 
 ```swift
-let model = MobileCLIP2()
-try model.loadModelFromBundle()
+let model = MobileCLIP()
+try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
 // Warm up - compiles all Metal kernels
 try model.warmup()
@@ -566,13 +637,14 @@ MLX.GPU.set(memoryLimit: 2 * 1024 * 1024 * 1024)  // 2GB
 
 ### Performance Checklist
 
-When deploying MobileCLIP2:
+When deploying MobileCLIP:
 
-- [ ] Set appropriate `gpuCacheLimit` based on device capabilities
+- [ ] Set appropriate `memoryProfile` based on device capabilities
 - [ ] Call `warmup()` after loading the model
 - [ ] Use batch processing when possible (batch size 4-16)
 - [ ] Build in Release mode (`-c release`)
 - [ ] Run outside debugger for accurate performance measurement
+- [ ] Ensure network connection on first run to download and cache the model
 - [ ] Consider model quantization for memory-constrained devices (future optimization)
 
 ### Expected Performance

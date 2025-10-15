@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import MLX
 import MLXRandom
+import MLXLMCommon
 @testable import MobileCLIP
 
 /// Comprehensive architecture verification tests for MobileCLIP2-S4
@@ -14,7 +15,7 @@ struct ArchitectureVerificationTests {
     @Test("Complete vision encoder pipeline produces correct shapes")
     func completeVisionEncoderShapes() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         let batchSize = 2
         let input = MLXArray.zeros([batchSize, 3, 224, 224])
@@ -37,7 +38,7 @@ struct ArchitectureVerificationTests {
     @Test("Stem produces correct output shape")
     func stemOutputShape() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // Create a simple input
         let input = MLXArray.zeros([1, 3, 224, 224])
@@ -72,7 +73,7 @@ struct ArchitectureVerificationTests {
     @Test("Vision encoder preserves batch dimension", arguments: [1, 2, 4, 8])
     func visionEncoderBatchDimension(batchSize: Int) async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         let input = MLXArray.zeros([batchSize, 3, 224, 224])
         let output = try model.encodeImage(input)
@@ -167,7 +168,7 @@ struct ArchitectureVerificationTests {
     @Test("Output embeddings are L2 normalized")
     func embeddingsAreNormalized() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // Use random input instead of zeros to avoid NaN
         // MLXRandom.uniform with Range and shape
@@ -191,7 +192,7 @@ struct ArchitectureVerificationTests {
     @Test("Model loads expected number of weights")
     func modelWeightCount() async throws {
         let model = MobileCLIP()
-        try model.loadModelFromBundle()
+        try await model.load(configuration: ModelConfiguration(id: "1amageek/MobileCLIP2-S4"))
 
         // The model should have loaded 1715 tensors (documented in test output)
         // We verify the model loaded successfully
