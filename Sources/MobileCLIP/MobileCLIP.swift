@@ -38,7 +38,7 @@ public enum MemoryProfile {
 /// MobileCLIP2-S4 Model
 ///
 /// CLIP model for encoding images and text to compute similarity
-public class MobileCLIP2 {
+public class MobileCLIP {
 
     private let loader: ModelLoader
     private var visionEncoder: VisionEncoderComplete?
@@ -88,7 +88,6 @@ public class MobileCLIP2 {
     // MARK: - Model Loading (Asynchronous)
 
     /// ローカルパスからモデルを非同期ロード
-    /// UIブロックを防ぐため、モデルロードを別スレッドで実行
     /// - Parameter basePath: モデルファイルのベースパス
     ///
     /// Usage:
@@ -97,26 +96,12 @@ public class MobileCLIP2 {
     /// try await model.loadModelAsync(from: "/path/to/model")
     /// ```
     public func loadModelAsync(from basePath: String) async throws {
-        // Load on background thread
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                guard let self = self else {
-                    continuation.resume(throwing: ModelError.invalidModelStructure)
-                    return
-                }
-                do {
-                    try self.loader.loadWeights(basePath: basePath)
-                    try self.initializeEncoders()
-                    continuation.resume()
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }
-        }
+        // MLX operations are already optimized for async execution
+        try loader.loadWeights(basePath: basePath)
+        try initializeEncoders()
     }
 
     /// Bundleからモデルを非同期ロード
-    /// UIブロックを防ぐため、モデルロードを別スレッドで実行
     /// - Parameter resourceName: リソース名（デフォルト: "MobileCLIP2-S4"）
     ///
     /// Usage:
@@ -125,22 +110,9 @@ public class MobileCLIP2 {
     /// try await model.loadModelFromBundleAsync()
     /// ```
     public func loadModelFromBundleAsync(resourceName: String = "MobileCLIP2-S4") async throws {
-        // Load on background thread
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                guard let self = self else {
-                    continuation.resume(throwing: ModelError.invalidModelStructure)
-                    return
-                }
-                do {
-                    try self.loader.loadFromBundle(resourceName: resourceName)
-                    try self.initializeEncoders()
-                    continuation.resume()
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }
-        }
+        // MLX operations are already optimized for async execution
+        try loader.loadFromBundle(resourceName: resourceName)
+        try initializeEncoders()
     }
 
     /// Hugging Faceからモデルを自動ダウンロードして読み込む
@@ -208,21 +180,8 @@ public class MobileCLIP2 {
     /// try await model.warmupAsync()
     /// ```
     public func warmupAsync() async throws {
-        // Warmup on background thread
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                guard let self = self else {
-                    continuation.resume(throwing: ModelError.invalidModelStructure)
-                    return
-                }
-                do {
-                    try self.warmup()
-                    continuation.resume()
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }
-        }
+        // MLX operations are already optimized for async execution
+        try warmup()
     }
 
     // MARK: - Encoding

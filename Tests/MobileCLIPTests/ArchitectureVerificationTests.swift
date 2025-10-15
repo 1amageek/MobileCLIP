@@ -13,7 +13,7 @@ struct ArchitectureVerificationTests {
 
     @Test("Complete vision encoder pipeline produces correct shapes")
     func completeVisionEncoderShapes() async throws {
-        let model = MobileCLIP2()
+        let model = MobileCLIP()
         try model.loadModelFromBundle()
 
         let batchSize = 2
@@ -36,7 +36,7 @@ struct ArchitectureVerificationTests {
 
     @Test("Stem produces correct output shape")
     func stemOutputShape() async throws {
-        let model = MobileCLIP2()
+        let model = MobileCLIP()
         try model.loadModelFromBundle()
 
         // Create a simple input
@@ -71,7 +71,7 @@ struct ArchitectureVerificationTests {
 
     @Test("Vision encoder preserves batch dimension", arguments: [1, 2, 4, 8])
     func visionEncoderBatchDimension(batchSize: Int) async throws {
-        let model = MobileCLIP2()
+        let model = MobileCLIP()
         try model.loadModelFromBundle()
 
         let input = MLXArray.zeros([batchSize, 3, 224, 224])
@@ -166,7 +166,7 @@ struct ArchitectureVerificationTests {
 
     @Test("Output embeddings are L2 normalized")
     func embeddingsAreNormalized() async throws {
-        let model = MobileCLIP2()
+        let model = MobileCLIP()
         try model.loadModelFromBundle()
 
         // Use random input instead of zeros to avoid NaN
@@ -190,7 +190,7 @@ struct ArchitectureVerificationTests {
 
     @Test("Model loads expected number of weights")
     func modelWeightCount() async throws {
-        let model = MobileCLIP2()
+        let model = MobileCLIP()
         try model.loadModelFromBundle()
 
         // The model should have loaded 1715 tensors (documented in test output)

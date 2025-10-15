@@ -142,7 +142,7 @@ struct RealImageTests {
             return  // テスト画像がない場合はスキップ
         }
 
-        let model = MobileCLIP2()
+        let model = MobileCLIP()
         try model.loadModelFromBundle()
 
         let imageArray = try Self.loadImage(from: testImagePath)
@@ -171,7 +171,7 @@ struct RealImageTests {
             return
         }
 
-        let model = MobileCLIP2()
+        let model = MobileCLIP()
         try model.loadModelFromBundle()
 
         // 画像をエンコード
@@ -221,7 +221,7 @@ struct RealImageTests {
             return
         }
 
-        let model = MobileCLIP2()
+        let model = MobileCLIP()
         try model.loadModelFromBundle()
 
         // 画像をエンコード
