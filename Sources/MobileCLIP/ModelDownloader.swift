@@ -5,7 +5,7 @@ import Hub
 public actor ModelDownloader {
 
     /// Configuration for a MobileCLIP model on Hugging Face
-    public struct ModelConfig {
+    public struct ModelConfig: Sendable {
         public let repoID: String
         public let filename: String
 
