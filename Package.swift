@@ -14,7 +14,8 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/ml-explore/mlx-swift", branch: "main")
+        .package(url: "https://github.com/ml-explore/mlx-swift", branch: "main"),
+        .package(url: "https://github.com/ml-explore/mlx-swift-examples", branch: "main")
     ],
     targets: [
         .target(
@@ -22,7 +23,8 @@ let package = Package(
             dependencies: [
                 .product(name: "MLX", package: "mlx-swift"),
                 .product(name: "MLXNN", package: "mlx-swift"),
-                .product(name: "MLXRandom", package: "mlx-swift")
+                .product(name: "MLXRandom", package: "mlx-swift"),
+                .product(name: "MLXLMCommon", package: "mlx-swift-examples")
             ],
             resources: [
                 .copy("Resources")

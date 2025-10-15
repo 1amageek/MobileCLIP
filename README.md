@@ -19,37 +19,50 @@ dependencies: [
 
 ## 📦 モデルのセットアップ
 
-モデルファイルは容量が大きいため、Hugging Faceから自動ダウンロードする仕組みになっています。
+モデルは**Hugging Faceから自動ダウンロード**されます。Pythonスクリプトは不要です！
 
-### 1. 依存パッケージのインストール
+### 自動ダウンロード（推奨）
+
+初回実行時に自動的にモデルをダウンロードします：
+
+```swift
+import MobileCLIP
+import MLX
+
+let model = MobileCLIP2()
+
+// 初回実行時：Hugging Faceから自動ダウンロード（1.7GB）
+// 2回目以降：ローカルキャッシュを使用（高速）
+try await model.loadModelFromHuggingFace()
+
+// ウォームアップ（推奨）
+try await model.warmupAsync()
+```
+
+**ダウンロード先:**
+- macOS: `~/Library/Caches/huggingface/hub/`
+- iOS: アプリのCachesディレクトリ
+
+**進捗表示付き:**
+```swift
+try await model.loadModelFromHuggingFace { progress in
+    print("Downloaded: \(progress.fractionCompleted * 100)%")
+}
+```
+
+### 手動セットアップ（開発者向け）
+
+Pythonスクリプトを使用して事前にダウンロードすることも可能：
 
 ```bash
 pip install torch transformers safetensors
+python convert_to_safetensors.py  # MobileCLIP2-S4をダウンロード
 ```
 
-### 2. モデルのダウンロードと変換
-
-```bash
-# MobileCLIP2-S4をダウンロード（デフォルト）
-python convert_to_safetensors.py
-
-# または他のモデルを指定
-python convert_to_safetensors.py --model apple/MobileCLIP2-S2
+その後、Bundleから読み込み：
+```swift
+try model.loadModelFromBundle()
 ```
-
-このスクリプトは以下を実行します：
-1. Hugging Faceから指定モデルをダウンロード
-2. safetensors形式に変換
-3. `Sources/MobileCLIP/Resources/MobileCLIP2-S4.safetensors` に保存
-
-### 利用可能なモデル
-
-- `apple/MobileCLIP2-S0` (11.4M params, 71.5% ImageNet)
-- `apple/MobileCLIP2-S2` (35.7M params, 77.2% ImageNet)
-- `apple/MobileCLIP2-B` (86.3M params, 79.4% ImageNet)
-- `apple/MobileCLIP2-S3` (125.1M params, 80.7% ImageNet)
-- `apple/MobileCLIP2-L-14` (304.3M params, 81.9% ImageNet)
-- `apple/MobileCLIP2-S4` (321.6M params, 81.9% ImageNet) **[デフォルト]**
 
 ## 💻 使い方
 
@@ -59,31 +72,38 @@ python convert_to_safetensors.py --model apple/MobileCLIP2-S2
 import MobileCLIP
 import MLX
 
-// Initialize model with default settings (balanced: 64MB GPU cache)
+// モデルを初期化（デフォルト: balanced 64MB GPU cache）
 let model = MobileCLIP2()
 
-// Or specify memory profile for your device:
-// let model = MobileCLIP2(memoryProfile: .low)    // 20MB - iPhone SE, older devices
-// let model = MobileCLIP2(memoryProfile: .high)   // 128MB - M1/M2 Macs, iPad Pro
-// let model = MobileCLIP2(memoryProfile: .custom(megabytes: 100))  // Custom
+// メモリプロファイルを指定することも可能：
+// let model = MobileCLIP2(memoryProfile: .low)    // 20MB - iPhone SE, 古いデバイス
+// let model = MobileCLIP2(memoryProfile: .high)   // 128MB - M1/M2 Mac, iPad Pro
+// let model = MobileCLIP2(memoryProfile: .custom(megabytes: 100))  // カスタム
 
-// Load model from Bundle (recommended)
-try model.loadModelFromBundle()
+// Hugging Faceから自動ダウンロード（推奨）
+try await model.loadModelFromHuggingFace()
 
-// Or load from local path
-// try model.loadModel(from: "/path/to/MobileCLIP2-S4")
+// ウォームアップ（Metal kernelのコンパイル）
+try await model.warmupAsync()
 
-// Optional: Warm up the model to compile Metal kernels
-try model.warmup()
-
-// Print model info
+// モデル情報を表示
 model.printModelInfo()
 
-// Encode image
-let image = MLXArray.ones([1, 3, 224, 224]) * 0.5  // Dummy image
+// 画像をエンコード
+let image = MLXArray.ones([1, 3, 224, 224]) * 0.5  // ダミー画像
 let imageEmbedding = try model.encodeImage(image)
 
 print("Image embedding shape: \(imageEmbedding.shape)")
+```
+
+### その他のロード方法
+
+```swift
+// Bundleから読み込む（事前にモデルファイルを含める場合）
+try await model.loadModelFromBundleAsync()
+
+// ローカルパスから読み込む
+try await model.loadModelAsync(from: "/path/to/model")
 ```
 
 ### 画像の前処理

@@ -31,6 +31,18 @@ public class ModelLoader {
         }
     }
 
+    /// safetensorsファイルを直接ロード
+    /// - Parameter url: safetensorsファイルのURL
+    /// - Throws: ファイルが見つからない、または読み込みエラー
+    public func loadFromSafetensors(url: URL) throws {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw ModelError.fileNotFound("File not found at \(url.path)")
+        }
+
+        // MLX.loadArrays()はsafetensors形式をサポート
+        weights = try MLX.loadArrays(url: url)
+    }
+
     /// Bundleからsafetensorsファイルをロード
     /// - Parameter resourceName: リソース名（拡張子なし）
     /// - Throws: ファイルが見つからない、または読み込みエラー
@@ -58,8 +70,8 @@ public class ModelLoader {
             throw ModelError.fileNotFound("\(safetensorsFile) not found at \(url.path)")
         }
 
-        // MLX.loadArrays()はsafetensors形式をサポート
-        weights = try MLX.loadArrays(url: url)
+        // Use the new loadFromSafetensors method
+        try loadFromSafetensors(url: url)
     }
 
     /// 特定のキーの重みを取得

@@ -143,6 +143,31 @@ public class MobileCLIP2 {
         }
     }
 
+    /// Hugging Faceからモデルを自動ダウンロードして読み込む
+    /// 初回実行時にモデルをダウンロードし、2回目以降はキャッシュを使用
+    /// - Parameter config: Model configuration (default: MobileCLIP2-S4)
+    /// - Parameter progressHandler: Progress callback (optional)
+    ///
+    /// Usage:
+    /// ```swift
+    /// let model = MobileCLIP2()
+    /// try await model.loadModelFromHuggingFace()  // Automatically downloads on first run
+    /// ```
+    public func loadModelFromHuggingFace(
+        config: ModelDownloader.ModelConfig = .mobileCLIP2S4,
+        progressHandler: @Sendable @escaping (Progress) -> Void = { _ in }
+    ) async throws {
+        let downloader = ModelDownloader()
+        let modelURL = try await downloader.download(
+            config: config,
+            progressHandler: progressHandler
+        )
+
+        // Load weights from downloaded safetensors file
+        try loader.loadFromSafetensors(url: modelURL)
+        try initializeEncoders()
+    }
+
     private func initializeEncoders() throws {
         // Vision Encoderを初期化
         visionEncoder = VisionEncoderComplete(weights: loader.weights)
